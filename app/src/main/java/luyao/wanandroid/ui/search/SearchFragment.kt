@@ -8,13 +8,11 @@ import androidx.appcompat.widget.SearchView
 import androidx.core.os.bundleOf
 import androidx.lifecycle.Observer
 import androidx.navigation.Navigation
-import androidx.recyclerview.widget.LinearLayoutManager
 import com.chad.library.adapter.base.BaseQuickAdapter
 import com.zhy.view.flowlayout.FlowLayout
 import com.zhy.view.flowlayout.TagAdapter
-import kotlinx.android.synthetic.main.fragment_search.*
 import kotlinx.android.synthetic.main.fragment_home.*
-import luyao.util.ktx.ext.dp2px
+import kotlinx.android.synthetic.main.fragment_search.*
 import luyao.util.ktx.ext.startKtxActivity
 import luyao.wanandroid.R
 import luyao.wanandroid.adapter.HomeArticleAdapter
@@ -23,50 +21,42 @@ import luyao.wanandroid.model.bean.Hot
 import luyao.wanandroid.ui.BrowserActivity
 import luyao.wanandroid.util.Preference
 import luyao.wanandroid.view.CustomLoadMoreView
-import luyao.wanandroid.view.SpaceItemDecoration
-import org.koin.androidx.viewmodel.ext.android.getViewModel
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 
 /**
  * Created by Lu
  * on 2018/4/2 22:00
  */
-class SearchFragment : luyao.mvvm.core.base.BaseVMFragment<SearchViewModel>() {
+class SearchFragment : luyao.mvvm.core.base.BaseVMFragment<FragmentSearchBinding>(R.layout.fragment_search) {
 
-    override fun initVM(): SearchViewModel = getViewModel()
+    private val searchViewModel by viewModel<SearchViewModel>()
 
     private val isLogin by Preference(Preference.IS_LOGIN, false)
     private val searchAdapter by lazy { HomeArticleAdapter() }
     private var key = ""
-    private lateinit var mEmptyView : View
-
-    override fun getLayoutResId() = R.layout.fragment_search
+    private lateinit var mEmptyView: View
 
     private val hotList = mutableListOf<Hot>()
     private val webSitesList = mutableListOf<Hot>()
 
     override fun initView() {
-        (mBinding as FragmentSearchBinding).viewModel = mViewModel
-        initTagLayout()
-
-        searchRecycleView.run {
-            layoutManager = LinearLayoutManager(context)
-            addItemDecoration(SpaceItemDecoration(searchRecycleView.dp2px(10)))
-
+        binding.run {
+            viewModel = searchViewModel
+            adapter = searchAdapter
         }
+        initTagLayout()
         initAdapter()
         searchRefreshLayout.setOnRefreshListener { refresh() }
 
         searchView.run {
-            //            isIconified = false
-//            onActionViewExpanded()
             setOnQueryTextListener(onQueryTextListener)
         }
     }
 
     private fun refresh() {
         searchAdapter.setEnableLoadMore(false)
-        mViewModel.searchHot(true, key)
+        searchViewModel.searchHot(true, key)
     }
 
     private fun initAdapter() {
@@ -78,20 +68,19 @@ class SearchFragment : luyao.mvvm.core.base.BaseVMFragment<SearchViewModel>() {
             setLoadMoreView(CustomLoadMoreView())
             setOnLoadMoreListener({ loadMore() }, homeRecycleView)
         }
-        searchRecycleView.adapter = searchAdapter
         mEmptyView = layoutInflater.inflate(R.layout.empty_view, searchRecycleView.parent as ViewGroup, false)
         val emptyTv = mEmptyView.findViewById<TextView>(R.id.emptyTv)
         emptyTv.text = getString(R.string.try_another_key)
     }
 
     private fun loadMore() {
-        mViewModel.searchHot(false, key)
+        searchViewModel.searchHot(false, key)
     }
 
     override fun initData() {
 //        searchToolbar.setNavigationOnClickListener { onBackPressed() }
-        mViewModel.getHotSearch()
-        mViewModel.getWebSites()
+        searchViewModel.getHotSearch()
+        searchViewModel.getWebSites()
     }
 
     private val onItemChildClickListener = BaseQuickAdapter.OnItemChildClickListener { _, view, position ->
@@ -101,7 +90,7 @@ class SearchFragment : luyao.mvvm.core.base.BaseVMFragment<SearchViewModel>() {
                     searchAdapter.run {
                         data[position].run {
                             collect = !collect
-                            mViewModel.collectArticle(id, collect)
+                            searchViewModel.collectArticle(id, collect)
                         }
                         notifyDataSetChanged()
                     }
@@ -154,7 +143,7 @@ class SearchFragment : luyao.mvvm.core.base.BaseVMFragment<SearchViewModel>() {
 
     private fun startSearch(key: String) {
         searchView.clearFocus()
-        mViewModel.searchHot(true, key)
+        searchViewModel.searchHot(true, key)
     }
 
     private val onQueryTextListener = object : SearchView.OnQueryTextListener {
@@ -172,7 +161,7 @@ class SearchFragment : luyao.mvvm.core.base.BaseVMFragment<SearchViewModel>() {
 
     override fun startObserve() {
 
-        mViewModel.uiState.observe(viewLifecycleOwner, Observer {
+        searchViewModel.uiState.observe(viewLifecycleOwner, Observer {
             searchRecycleView.visibility = if (it.showHot) View.GONE else View.VISIBLE
             hotContent.visibility = if (!it.showHot) View.GONE else View.VISIBLE
             searchRefreshLayout.isRefreshing = it.showLoading
